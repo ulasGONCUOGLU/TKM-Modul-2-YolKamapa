@@ -260,3 +260,55 @@ def get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
         return default
 
     return response.data[0]["value"]
+
+
+# ============================================================
+# ADM (AYDEM) PLANLI ÇALIŞMALARI
+# ============================================================
+# Tablolar: supabase_adm_calismalari.sql. Mantık: adm.py.
+
+def get_kavsaklar() -> List[Dict[str, Any]]:
+    """Sinyalize kavşakların kodu, adı ve koordinatları (tablo: kavsaklar)."""
+    response = (
+        supabase.table("kavsaklar")
+        .select("kod, ad, latitude, longitude")
+        .limit(5000)
+        .execute()
+    )
+    return response.data or []
+
+
+def get_adm_mevcut(ilce: str) -> List[Dict[str, Any]]:
+    """Bir ilçe için kayıtlı ADM çalışmalarının özeti (değişiklik/silinme tespiti için)."""
+    response = (
+        supabase.table("adm_calismalari")
+        .select("kesinti_id, durum_kodu, planlanan_baslangic, planlanan_bitis")
+        .eq("ilce", ilce)
+        .limit(5000)
+        .execute()
+    )
+    return response.data or []
+
+
+def save_adm_calismalari(rows: List[Dict[str, Any]], kalkan_idler: List[str]) -> None:
+    """
+    Çalışmaları kesinti_id'ye göre ekler/günceller (ilk_gorulme korunur) ve
+    ADM'nin listesinden kalkanları kaynaktan_kalkti=true olarak işaretler.
+    """
+    for i in range(0, len(rows), 100):
+        supabase.table("adm_calismalari").upsert(
+            rows[i : i + 100], on_conflict="kesinti_id"
+        ).execute()
+
+    for i in range(0, len(kalkan_idler), 100):
+        (
+            supabase.table("adm_calismalari")
+            .update({"kaynaktan_kalkti": True, "updated_at": datetime.now().isoformat()})
+            .in_("kesinti_id", kalkan_idler[i : i + 100])
+            .execute()
+        )
+
+
+def save_adm_sync_durumu(payload: Dict[str, Any]) -> None:
+    """adm_sync_durumu tek satırını (id=1) günceller; verilmeyen alanlar korunur."""
+    supabase.table("adm_sync_durumu").upsert(payload, on_conflict="id").execute()

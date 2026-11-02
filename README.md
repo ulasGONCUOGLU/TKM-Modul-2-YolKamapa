@@ -113,6 +113,23 @@ tablosundan izleyebilirsiniz.
   `INTERNAL_API_TOKEN` container'a ortam değişkeni olarak geçilmeli
   (`.env` dosyasını image'a gömmeyin).
 
+## ADM (Aydem) planlı elektrik çalışmaları
+
+"Verileri Çek" akışının sonunda (`main.py` → `_adm_adimi()`) `adm.py` çalışır:
+
+1. ADM'nin `test-outages` adresinden Merkezefendi ve Pamukkale çalışmalarını çeker (Honaz yok).
+2. Yanıtı sıkı doğrular (zarf, zorunlu alanlar, ilçe eşleşmesi); geçici sorunlarda 3 kez dener.
+3. Alan çizimini (poligon/çizgi/nokta) koordinata çevirir; `kavsaklar` tablosundaki sinyalize kavşaklarla kesişimi
+   ("içinde" ya da en çok 150 m "yakın") hesaplar. Şehir dışındaki kayıtlar yalnızca tabloda kalır.
+4. `adm_calismalari` tablosuna yazar; ADM listesinden kalkanlar `kaynaktan_kalkti=true` olur, saat değişiklikleri `onceki_plan`da tutulur.
+5. Sonucu `adm_sync_durumu` (tek satır) tablosuna yazar. ADM tarafında beklenmedik bir sorun olursa (engel, bozuk/başka biçimde yanıt)
+   **mevcut veriye dokunulmaz**, Türkçe açıklayıcı hata mesajı kaydedilir ve sitede gösterilir.
+   ADM adımı hata verse bile yol kapama akışı kesilmez; tersine yol kapama hatası ADM'den sonra yine bildirilir.
+
+Kurulum: `supabase_adm_calismalari.sql` dosyasını SQL Editor'de çalıştırın (web deposundaki `supabase/adm_calismalari.sql` ile aynıdır; önce web deposundaki `kavsaklar.sql` çalışmış olmalı),
+sonra `pip install -r requirements.txt` (shapely ve numpy eklendi). Ayarlar `.env.example` içindeki `ADM_*` değişkenleridir.
+Riskler: ADM bu adresi değiştirebilir; ADM'nin bot koruması (F5) Python isteğini engelleyebilir (hata mesajı bunu söyler, `ADM_USER_AGENT` denenebilir).
+
 ## Nominatim / OSM kullanım kuralları
 
 Genel `nominatim.openstreetmap.org` sunucusu ücretsizdir ama kuralları vardır ([politika](https://operations.osmfoundation.org/policies/nominatim/)):
@@ -131,6 +148,8 @@ AI_düzenleme.py               Gemini ile güzergah analizi (system_prompt Supab
 konum.py                      Nominatim/OSRM geocoding (önbellekli, Türkçe harf duyarlı)
 db_supabase.py                Supabase kalıcılık katmanı (SQLite'ın yerini alıyor)
 app.py                        Flask sarmalayıcısı (POST /run, GET /health)
+adm.py                        ADM planlı elektrik çalışmaları (çek, doğrula, kavşakla kesiştir, kaydet)
+supabase_adm_calismalari.sql  adm_calismalari + adm_sync_durumu tabloları
 supabase_schema_update.sql    Tüm tabloların güvenli, tekrar çalıştırılabilir şeması + RPC
 requirements.txt
 .env.example

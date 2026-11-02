@@ -28,6 +28,19 @@
 | `.env.example` | **YENİ** | README'de anılıyordu ama depoda yoktu. |
 | `README.md` | Değişti | Güncel akışa göre. |
 
+## ADM (Aydem) planlı elektrik çalışmaları (yeni)
+
+| Dosya | Değişiklik | Neden |
+| --- | --- | --- |
+| `adm.py` | Yeni | ADM'den Merkezefendi/Pamukkale çalışmalarını çeker, doğrular, alanı çözer, 150 m içindeki sinyalize kavşakları bulur, kaydeder. Hata olursa Türkçe mesaj yazar, eski veriye dokunmaz. |
+| `supabase_adm_calismalari.sql` | Yeni | `adm_calismalari` ve `adm_sync_durumu` tabloları (SQL Editor'de bir kez çalıştırın). |
+| `main.py` | Değişti | Yol kapama adımından sonra ADM adımı; biri hata verse diğeri durmaz. |
+| `db_supabase.py` | Değişti | `get_kavsaklar`, `get_adm_mevcut`, `save_adm_calismalari`, `save_adm_sync_durumu`. |
+| `requirements.txt` | Değişti | `shapely`, `numpy` eklendi (`pip install -r requirements.txt`). |
+| `.env.example`, `README.md` | Değişti | `ADM_*` ayarları ve açıklama. |
+
+Test paketine `tests/test_adm.py` (53 test; toplam 132, hepsi geçti) ve `adm_dene.py` (veritabanına yazmadan gerçek ADM'yi dener) eklendi.
+
 ## Çok parçalı duyurular nasıl çalışır?
 
 1. AI metni parçalara ayırır (`segments[]`). Her parça: yol adı + başlangıç/bitiş kesişen sokaklar.
@@ -70,10 +83,11 @@ Başka bir şeyin (ör. Nuxt'un anon anahtarıyla `settings`'e yazan eski bir ko
 
 ## Doğruladıklarım
 
-- 79 birim testin hepsi geçti (ayrı test paketinden, temiz bir sanal ortamda).
+- 132 birim testin hepsi geçti (ayrı test paketinden, temiz bir sanal ortamda).
 - Şema, **gerçek Postgres 16'da** denendi: temiz kurulum, ikinci çalıştırma ve eski şemadan geçiş (veri korundu). Supabase'in varsayılan yetkileri taklit edilerek anon rolünün yalnızca okuyabildiği, sunucu rolünün (service_role) her şeyi yapabildiği ölçüldü.
 
 ## Yapmadıklarım
 
 - Gerçek Supabase, Gemini veya Nominatim ile denemedim (anahtarlarınız bende yok).
 - Git geçmişinizi değiştirmedim.
+- ADM kodunu gerçek ADM sitesine karşı çalıştıramadım (sandbox internetsiz); ADM'nin bot koruması Python isteğini engelleyebilir.

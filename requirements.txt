@@ -8,6 +8,7 @@
 # - geographiclib, geopy kaldırıldı: kod tabanında kullanılmıyorlardı
 #   (konum.py doğrudan `requests` ile Nominatim/OSRM'e gidiyor).
 # - flask, supabase, gunicorn eklendi.
+# - shapely (+ numpy) eklendi: ADM çalışma alanlarının sinyalize kavşaklarla kesişimi için (adm.py).
 
 annotated-types==0.8.0
 anyio==4.14.2
@@ -27,6 +28,7 @@ httpx==0.28.1
 idna==3.18
 Jinja2==3.1.6
 MarkupSafe==3.0.3
+numpy==2.5.4
 pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pycparser==3.0
@@ -34,6 +36,7 @@ pydantic==2.13.4
 pydantic_core==2.46.4
 python-dotenv==1.2.2
 requests==2.34.2
+shapely==2.2.0
 sniffio==1.3.1
 soupsieve==2.9.2
 supabase==2.31.0

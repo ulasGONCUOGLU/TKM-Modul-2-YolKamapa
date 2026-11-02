@@ -469,14 +469,74 @@ def process_pending_geocode(pending_records):
 # ANA PROGRAM (Flask'ın çağırdığı giriş noktası)
 # ============================================================
 
+def _adm_adimi() -> None:
+    """
+    ADM (Aydem) planlı çalışmalarını çeker. Yol kapama adımından BAĞIMSIZDIR:
+    ADM tarafında bir sorun olursa yol kapamalar etkilenmez; sorun
+    adm_sync_durumu tablosuna yazılır ve sitede gösterilir. Bu fonksiyon istisna fırlatmaz.
+    """
+
+    if os.getenv("ADM_AKTIF", "1").strip().lower() in ("0", "false", "hayir", "hayır"):
+        print("ADM adımı kapalı (ADM_AKTIF=0).")
+        return
+
+    print("ADM planlı çalışmaları çekiliyor...")
+
+    try:
+        import adm
+
+        sonuc = adm.run_adm_sync(db)
+        print(f"ADM: {sonuc['durum']} - {sonuc['kayit_sayisi']} kayıt")
+        for ilce, mesaj in sonuc["hatalar"].items():
+            print(f"ADM uyarı ({ilce}): {mesaj}")
+    except Exception as e:  # noqa: BLE001
+        # Örn. shapely kurulu değil. Sebebi siteye de yazmaya çalış.
+        print(f"ADM adımı çalıştırılamadı: {e}")
+        try:
+            db.save_adm_sync_durumu(
+                {
+                    "id": 1,
+                    "durum": "hata",
+                    "son_deneme": datetime.now().isoformat(),
+                    "hata_mesaji": (
+                        f"ADM adımı çalıştırılamadı ({type(e).__name__}: {e}). "
+                        "Eksik paket olabilir: pip install -r requirements.txt"
+                    ),
+                }
+            )
+        except Exception as e2:  # noqa: BLE001
+            print(f"ADM durumu yazılamadı: {e2}")
+
+
 def run_pipeline() -> None:
     """
     Tüm pipeline'ı bir kez baştan sona çalıştırır:
-    scrape -> Supabase'e kaydet -> AI analizi -> konum bulma.
+      1) yol kapama: scrape -> Supabase'e kaydet -> AI analizi -> konum bulma
+      2) ADM planlı çalışmaları (adm.py) — 1. adım hata verse de çalışır.
 
     Flask (app.py) bu fonksiyonu arka plan thread'inde çağırır.
     Script tek başına da çalıştırılabilir: `python main.py`
     """
+
+    yol_kapama_hatasi: Optional[BaseException] = None
+
+    try:
+        _yol_kapama_adimi()
+    except Exception as e:  # noqa: BLE001
+        yol_kapama_hatasi = e
+        print(f"Yol kapama adımı hata verdi: {e}")
+
+    _adm_adimi()
+
+    if yol_kapama_hatasi is not None:
+        # Site "Tekrar Dene" göstersin: hata yol kapama tarafında
+        raise yol_kapama_hatasi
+
+    print("İşlem tamamlandı.")
+
+
+def _yol_kapama_adimi() -> None:
+    """Belediye yol kapama duyurularını çeker, AI ile analiz eder, konumlandırır."""
 
     print("Yol Kapama pipeline'ı başlatılıyor...")
     print(f"URL: {URL}")
@@ -576,8 +636,6 @@ def run_pipeline() -> None:
     print(f"Konumu eksik/başarısız aktif kayıt: {len(pending_geocode_records)}")
 
     process_pending_geocode(pending_geocode_records)
-
-    print("İşlem tamamlandı.")
 
 
 if __name__ == "__main__":
